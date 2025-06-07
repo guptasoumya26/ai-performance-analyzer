@@ -1,0 +1,9 @@
+locust
+streamlit
+pandas
+matplotlib
+requests
+fastapi
+uvicorn
+fpdf
+plotly
