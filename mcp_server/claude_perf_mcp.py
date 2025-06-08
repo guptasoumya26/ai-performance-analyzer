@@ -80,8 +80,25 @@ class PerfInsightTools:
             before_val = val.get("before")
             after_val = val.get("after")
             change = val.get("change_percent")
+            status = ""
             if change is not None:
-                summary_lines.append(f"{key}: {before_val} → {after_val} ({change:+.2f}% change)")
+                if key in ["avg_response_time", "p95_response_time"]:
+                    if change > 20:
+                        status = "⚠️ Warning: Significant increase"
+                    elif change < -20:
+                        status = "✅ Stable: Significant improvement"
+                    else:
+                        status = "🟢 Stable"
+                elif key == "error_rate":
+                    if after_val > 5:
+                        status = "🚨 Threat: High error rate"
+                    elif after_val > 0:
+                        status = "⚠️ Warning: Some errors"
+                    else:
+                        status = "🟢 Stable"
+                elif key == "total_requests":
+                    status = ""
+                summary_lines.append(f"{key}: {before_val} → {after_val} ({change:+.2f}% change) {status}")
                 diff_metrics.append({
                     "Metric": key,
                     "Before": before_val,
@@ -96,9 +113,17 @@ class PerfInsightTools:
                     "After": after_val,
                     "% Change": None
                 })
-        analysis = "\n".join(summary_lines) if summary_lines else "No significant differences found."
+        conclusion = ""
+        if any("Threat" in line for line in summary_lines):
+            conclusion = "🚨 Conclusion: There is a performance threat that needs immediate attention."
+        elif any("Warning" in line for line in summary_lines):
+            conclusion = "⚠️ Conclusion: There are warnings. Please review the metrics."
+        elif any("improvement" in line for line in summary_lines):
+            conclusion = "✅ Conclusion: Performance has improved."
+        else:
+            conclusion = "🟢 Conclusion: System is stable."
+        analysis = "\n".join(summary_lines) + "\n\n" + conclusion if summary_lines else "No significant differences found."
         return {
-            "summary": "Performance comparison completed.",
             "analysis": analysis,
             "diff_metrics": diff_metrics
         }
